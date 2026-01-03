@@ -35,6 +35,9 @@
             margin-bottom: 15px;
         }
         
+        /* สไตล์สำหรับช่องที่ถูกล็อค (Read Only) */
+        .input-field[readonly] { background-color: #f0f0f0; color: #888; cursor: not-allowed; }
+
         textarea.input-field { height: 200px; resize: none; margin-bottom: 20px; }
         .input-field:focus { outline: none; background-color: #fafafa; border-color: #FF8C42; }
         
@@ -76,7 +79,7 @@
             transform: scale(0.9); transition: transform 0.5s ease;
         }
         .modal-overlay.show .modal-box { transform: scale(1); }
-        .modal-text { font-size: 1.5rem; font-weight: 600; color: #4A4A4A; line-height: 1.5; margin-bottom: 20px; }
+        .modal-text { font-size: 1.6rem; font-weight: 600; color: #4A4A4A; line-height: 1.5; margin-bottom: 20px; } /* ปรับ font นิดนึง */
         .modal-btn-confirm { background: #333; color: white; padding: 10px 30px; border: none; border-radius: 50px; cursor: pointer; font-size: 1rem; }
         .modal-btn-cancel { background: #eee; color: #333; padding: 10px 30px; border: none; border-radius: 50px; cursor: pointer; font-size: 1rem; margin-right: 10px; }
 
@@ -88,7 +91,7 @@
 
     <div class="modal-overlay" id="successModal">
         <div class="modal-box">
-            <p class="modal-text">เราจะอยู่ข้างๆ ตัวคุณ<br>ในวันที่แย่หรือล้มลงเสมอ 😊</p>
+            <p class="modal-text" id="encouragementText">...</p>
         </div>
     </div>
 
@@ -107,7 +110,7 @@
         <div class="role-card" id="btnVenter">
             <span class="role-icon">😊</span>
             <h2>ผู้ระบาย</h2>
-            <p>มีเรื่องไม่สบายใจ อยากเล่าให้ใครสักคนฟัง ให้เราเป็นคนนั้น </p>
+            <p>มีเรื่องไม่สบายใจ อยากเล่าให้ใครสักคนฟัง ให้เล่าให้เราฟังได้นะ</p>
         </div>
     </div>
 
@@ -116,7 +119,7 @@
         <div class="form-box">
             <div class="form-header">
                 <h2>😊 พื้นที่ระบายความในใจ</h2>
-                <p>เราจะอยู่ข้างคุณในวันที่คุณไม่ไหว</p>
+                <p>เราจะอยู่ข้างๆคุณในวันที่คุณต้องการ</p>
             </div>
             
             <input type="text" id="formName" class="input-field" placeholder="ใส่ชื่อเล่นของคุณ (ไม่บังคับ)">
@@ -167,6 +170,34 @@
         const successModal = document.getElementById('successModal');
         const loginModal = document.getElementById('loginModal');
         const adminPassword = document.getElementById('adminPassword');
+        const encouragementText = document.getElementById('encouragementText');
+
+        // --- ระบบสุ่มคำคม (Random Quotes) ---
+        const quotes = [
+            "เราจะอยู่ข้างๆ ตัวคุณ<br>ในวันที่แย่หรือล้มลงเสมอ 😊",
+            "เก่งมากเลยนะ<br>ที่ผ่านเรื่องราววันนี้มาได้ ✌️",
+            "ร้องไห้ออกมาได้นะ<br>น้ำตาไม่ใช่ความอ่อนแอ 🌧️",
+            "พักผ่อนบ้างนะ<br>อย่าใจร้ายกับตัวเองนักเลย 💖",
+            "พรุ่งนี้...<br>จะเป็นวันที่ดีกว่าวันนี้นะ 🌤️",
+            "กอดๆ นะ<br>คุณไม่ได้อยู่ตัวคนเดียวนะ 🤗",
+            "ความเจ็บปวด<br>จะทำให้เราเติบโตขึ้นเสมอ 🌱",
+            "ยิ้มให้กับตัวเองบ้างนะ<br>คุณทำดีที่สุดแล้ว 😊",
+            "ฟ้าหลังฝน<br>ย่อมสวยงามเสมอ 🌈",
+            "เหนื่อยก็พักนะ<br>เราเป็นกำลังใจให้เสมอ 🔋"
+        ];
+
+        let lastQuoteIndex = -1; // จำค่าล่าสุดไว้
+
+        function getRandomQuote() {
+            let newIndex;
+            // สุ่มใหม่เรื่อยๆ ถ้ามันไปซ้ำกับอันล่าสุด (และต้องมีคำคมมากกว่า 1 อัน)
+            do {
+                newIndex = Math.floor(Math.random() * quotes.length);
+            } while (newIndex === lastQuoteIndex && quotes.length > 1);
+
+            lastQuoteIndex = newIndex; // จำค่าใหม่ไว้
+            return quotes[newIndex];
+        }
 
         // Modal Logic
         function closeSuccessModal() {
@@ -174,7 +205,7 @@
             setTimeout(() => {
                 successModal.style.display = 'none';
                 formInput.value = '';
-                formName.value = ''; // ล้างช่องชื่อด้วยเพื่อให้คนใหม่พิมพ์
+                formName.value = '';
                 document.getElementById('btnBackForm').click();
             }, 500);
         }
@@ -220,7 +251,6 @@
         // Send Message
         document.getElementById('btnSend').onclick = () => {
             const text = formInput.value.trim();
-            // ถ้าไม่พิมพ์ ให้เป็น "ไม่ระบุตัวตน"
             const name = formName.value.trim() || "ไม่ระบุตัวตน";
 
             if (text === "") return alert("กรุณาพิมพ์ข้อความก่อนส่งนะ");
@@ -231,9 +261,12 @@
                 date: new Date().toLocaleString('th-TH')
             })
             .then(() => {
+                // --- สุ่มคำคมใหม่ใส่เข้าไป ---
+                encouragementText.innerHTML = getRandomQuote();
+
                 successModal.style.display = 'flex';
                 setTimeout(() => { successModal.classList.add('show'); }, 10);
-                setTimeout(() => { closeSuccessModal(); }, 3000); 
+                setTimeout(() => { closeSuccessModal(); }, 3500); // เพิ่มเวลาโชว์นิดนึงเป็น 3.5 วิ
             })
             .catch((error) => {
                 alert("เกิดข้อผิดพลาด: " + error.message);
@@ -298,4 +331,3 @@
     </script>
 </body>
 </html>
-
