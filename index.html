@@ -46,11 +46,46 @@
         .admin-toggle { position: fixed; bottom: 10px; right: 10px; background: transparent; border: none; color: #ccc; cursor: pointer; font-size: 0.8rem; }
         .admin-toggle:hover { color: #333; }
 
+        /* --- Custom Modal (กล่องเด้งแบบใหม่) --- */
+        .modal-overlay {
+            display: none; /* ซ่อนไว้ก่อน */
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6); /* ฉากหลังสีดำจางๆ */
+            z-index: 1000;
+            justify-content: center; align-items: center;
+        }
+        .modal-box {
+            background: white; padding: 50px 30px; border-radius: 25px;
+            text-align: center; max-width: 90%; width: 500px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+            animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-text {
+            font-size: 1.8rem; /* ตัวใหญ่สะใจ */
+            font-weight: 600; color: #4A4A4A;
+            margin-bottom: 30px; line-height: 1.5;
+        }
+        .modal-btn {
+            background: #FF8C42; color: white; border: none;
+            padding: 12px 40px; font-size: 1.2rem; border-radius: 50px;
+            cursor: pointer; font-family: 'Kanit', sans-serif;
+            transition: transform 0.2s;
+        }
+        .modal-btn:hover { transform: scale(1.05); }
+
         @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes popIn { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
         .hidden { display: none !important; }
     </style>
 </head>
 <body>
+
+    <div class="modal-overlay" id="successModal">
+        <div class="modal-box">
+            <p class="modal-text">เราจะอยู่ข้างๆ ตัวคุณ<br>ในวันที่แย่หรือล้มลงเสมอ</p>
+            <button class="modal-btn" onclick="closeModal()">ตกลง</button>
+        </div>
+    </div>
 
     <div class="selection-screen" id="selectionScreen">
         <div class="role-card" id="btnVenter">
@@ -86,11 +121,9 @@
     <button class="admin-toggle" id="btnAdminLogin">Admin Login</button>
 
     <script type="module">
-        // 1. นำเข้า Library
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getDatabase, ref, push, onValue, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-        // 2. Config ของคุณ (ใส่ให้แล้ว!)
         const firebaseConfig = {
             apiKey: "AIzaSyDemVd2LZXn-wTWon-KOxIdN3AxkzASnkY",
             authDomain: "you-safe-6a7bd.firebaseapp.com",
@@ -102,19 +135,24 @@
             measurementId: "G-JPRR8JM77J"
         };
 
-        // เริ่มต้น Firebase
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
         const messagesRef = ref(db, 'messages');
 
-        // --- ส่วนจัดการหน้าจอ (UI Logic) ---
         const selectionScreen = document.getElementById('selectionScreen');
         const formScreen = document.getElementById('formScreen');
         const adminScreen = document.getElementById('adminScreen');
         const formInput = document.getElementById('formInput');
         const messageList = document.getElementById('messageList');
+        const successModal = document.getElementById('successModal'); // ดึง Modal มาใช้งาน
 
-        // ปุ่มเปลี่ยนหน้า
+        // เปิดให้ window เรียกใช้ฟังก์ชัน closeModal ได้
+        window.closeModal = function() {
+            successModal.style.display = 'none'; // ซ่อน Modal
+            formInput.value = ''; // ล้างข้อความ
+            document.getElementById('btnBackForm').click(); // กลับหน้าหลัก
+        }
+
         document.getElementById('btnVenter').onclick = () => {
             selectionScreen.classList.add('hidden');
             formScreen.style.display = 'block';
@@ -130,42 +168,36 @@
             selectionScreen.classList.remove('hidden');
         };
 
-        // --- ฟังก์ชันส่งข้อมูล ---
         document.getElementById('btnSend').onclick = () => {
             const text = formInput.value.trim();
             if (text === "") return alert("กรุณาพิมพ์ข้อความก่อนส่งนะ");
 
-            // ส่งข้อมูลขึ้น Firebase
             push(messagesRef, {
                 text: text,
                 date: new Date().toLocaleString('th-TH')
             })
             .then(() => {
-                alert("ส่งเรื่องราวเรียบร้อยครับ :)");
-                formInput.value = ''; // ล้างข้อความ
-                document.getElementById('btnBackForm').click(); // กลับหน้าหลัก
+                // *** เปลี่ยนจาก Alert เป็นแสดง Modal แทน ***
+                successModal.style.display = 'flex'; 
             })
             .catch((error) => {
-                alert("เกิดข้อผิดพลาดในการส่ง: " + error.message);
+                alert("เกิดข้อผิดพลาด: " + error.message);
             });
         };
 
-        // --- ฟังก์ชัน Admin Login ---
         document.getElementById('btnAdminLogin').onclick = () => {
             const pwd = prompt("กรุณาใส่รหัสผ่าน Admin:");
-            if(pwd === "1234") { // <--- รหัสผ่าน
+            if(pwd === "1234") {
                 selectionScreen.classList.add('hidden');
                 adminScreen.style.display = 'block';
             }
         };
 
-        // --- ฟังข้อมูลจาก Firebase แบบ Realtime ---
         onValue(messagesRef, (snapshot) => {
-            messageList.innerHTML = ""; // ล้างจอรอรับข้อมูลใหม่
+            messageList.innerHTML = "";
             const data = snapshot.val();
             
             if (data) {
-                // แปลงข้อมูลเป็น Array และกลับด้าน (ใหม่สุดขึ้นก่อน)
                 const list = Object.entries(data).reverse(); 
                 
                 list.forEach(([key, value]) => {
@@ -181,11 +213,9 @@
                     messageList.appendChild(li);
                 });
 
-                // ใส่ Event ให้ปุ่มลบ
                 document.querySelectorAll('.delete-btn').forEach(btn => {
                     btn.onclick = function() {
                         if(confirm("ยืนยันที่จะลบข้อความนี้?")) {
-                            // สั่งลบข้อมูลบน Cloud
                             remove(ref(db, 'messages/' + this.dataset.key));
                         }
                     }
