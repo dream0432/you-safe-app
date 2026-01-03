@@ -26,8 +26,17 @@
         .form-box { background: white; padding: 40px; border-radius: 20px; border-top: 8px solid #FF8C42; box-shadow: 0 15px 35px rgba(0,0,0,0.1); }
         .form-header h2 { margin-bottom: 5px; color: #333; }
         .form-header p { color: #888; margin-bottom: 20px; font-size: 0.9rem; }
-        textarea { width: 100%; height: 200px; padding: 15px; border: 2px solid #eee; border-radius: 12px; font-family: 'Kanit', sans-serif; resize: none; margin-bottom: 20px; font-size: 1rem; }
-        textarea:focus { outline: none; background-color: #fafafa; border-color: #FF8C42; }
+        
+        /* Input & Textarea */
+        .input-field {
+            width: 100%; padding: 15px;
+            border: 2px solid #eee; border-radius: 12px;
+            font-family: 'Kanit', sans-serif; font-size: 1rem;
+            margin-bottom: 15px;
+        }
+        
+        textarea.input-field { height: 200px; resize: none; margin-bottom: 20px; }
+        .input-field:focus { outline: none; background-color: #fafafa; border-color: #FF8C42; }
         
         /* Buttons */
         .action-btn { width: 100%; padding: 15px; border: none; border-radius: 10px; color: white; font-size: 1.1rem; cursor: pointer; background-color: #FF8C42; font-weight: 600; }
@@ -39,42 +48,39 @@
         .admin-box { background: white; padding: 30px; border-radius: 20px; border-top: 8px solid #333; box-shadow: 0 15px 35px rgba(0,0,0,0.1); }
         .message-item { border-bottom: 1px solid #eee; padding: 15px 0; display: flex; justify-content: space-between; align-items: flex-start; }
         .msg-content { flex: 1; margin-right: 15px; }
+        .msg-name { font-weight: 600; color: #FF8C42; margin-bottom: 3px; font-size: 1.05rem; }
         .msg-text { font-size: 1rem; color: #333; margin-bottom: 5px; white-space: pre-wrap; }
         .msg-date { font-size: 0.8rem; color: #999; }
+        
+        .btn-group { display: flex; gap: 5px; flex-direction: column; }
         .delete-btn { background: #ff4d4d; color: white; border: none; padding: 5px 12px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; }
         .delete-btn:hover { background: #d93636; }
+        .edit-btn { background: #ffaa00; color: white; border: none; padding: 5px 12px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; }
+        .edit-btn:hover { background: #e69900; }
+
         .admin-toggle { position: fixed; bottom: 10px; right: 10px; background: transparent; border: none; color: #ccc; cursor: pointer; font-size: 0.8rem; }
         .admin-toggle:hover { color: #333; }
 
-        /* --- Custom Modal (กล่องเด้งแบบใหม่) --- */
+        /* Modal Styles */
         .modal-overlay {
-            display: none; /* ซ่อนไว้ก่อน */
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.6); /* ฉากหลังสีดำจางๆ */
-            z-index: 1000;
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6); z-index: 1000;
             justify-content: center; align-items: center;
+            opacity: 0; transition: opacity 0.5s ease;
         }
+        .modal-overlay.show { display: flex; opacity: 1; }
         .modal-box {
-            background: white; padding: 50px 30px; border-radius: 25px;
-            text-align: center; max-width: 90%; width: 500px;
+            background: white; padding: 40px 30px; border-radius: 25px;
+            text-align: center; max-width: 90%; width: 400px;
             box-shadow: 0 20px 50px rgba(0,0,0,0.3);
-            animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transform: scale(0.9); transition: transform 0.5s ease;
         }
-        .modal-text {
-            font-size: 1.8rem; /* ตัวใหญ่สะใจ */
-            font-weight: 600; color: #4A4A4A;
-            margin-bottom: 30px; line-height: 1.5;
-        }
-        .modal-btn {
-            background: #FF8C42; color: white; border: none;
-            padding: 12px 40px; font-size: 1.2rem; border-radius: 50px;
-            cursor: pointer; font-family: 'Kanit', sans-serif;
-            transition: transform 0.2s;
-        }
-        .modal-btn:hover { transform: scale(1.05); }
+        .modal-overlay.show .modal-box { transform: scale(1); }
+        .modal-text { font-size: 1.5rem; font-weight: 600; color: #4A4A4A; line-height: 1.5; margin-bottom: 20px; }
+        .modal-btn-confirm { background: #333; color: white; padding: 10px 30px; border: none; border-radius: 50px; cursor: pointer; font-size: 1rem; }
+        .modal-btn-cancel { background: #eee; color: #333; padding: 10px 30px; border: none; border-radius: 50px; cursor: pointer; font-size: 1rem; margin-right: 10px; }
 
         @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes popIn { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
         .hidden { display: none !important; }
     </style>
 </head>
@@ -82,14 +88,24 @@
 
     <div class="modal-overlay" id="successModal">
         <div class="modal-box">
-            <p class="modal-text">เราจะอยู่ข้างๆ ตัวคุณ<br>ในวันที่แย่หรือล้มลงเสมอ</p>
-            <button class="modal-btn" onclick="closeModal()">ตกลง</button>
+            <p class="modal-text">เราจะอยู่ข้างๆ ตัวคุณ<br>ในวันที่แย่หรือล้มลงเสมอ 😊</p>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="loginModal">
+        <div class="modal-box">
+            <h3 style="margin-bottom:15px;">🔑 เข้าสู่ระบบ Admin</h3>
+            <input type="password" id="adminPassword" class="input-field" placeholder="ใส่รหัสผ่าน..." style="text-align:center;">
+            <div style="margin-top:20px;">
+                <button class="modal-btn-cancel" onclick="closeLogin()">ยกเลิก</button>
+                <button class="modal-btn-confirm" onclick="checkLogin()">ตกลง</button>
+            </div>
         </div>
     </div>
 
     <div class="selection-screen" id="selectionScreen">
         <div class="role-card" id="btnVenter">
-            <span class="role-icon"></span>
+            <span class="role-icon">😊</span>
             <h2>ผู้ระบาย</h2>
             <p>ฉันมีเรื่องไม่สบายใจ อยากเล่าให้ใครสักคนฟัง</p>
         </div>
@@ -99,10 +115,13 @@
         <a class="back-btn" id="btnBackForm">← กลับหน้าหลัก</a>
         <div class="form-box">
             <div class="form-header">
-                <h2> พื้นที่ระบายความในใจ</h2>
-                <p>เรื่องราวของคุณเราจะรับฟังมันไว้เอง</p>
+                <h2>😊 พื้นที่ระบายความในใจ</h2>
+                <p>เราจะอยู่ข้างคุณในวันที่คุณไม่ไหว</p>
             </div>
-            <textarea id="formInput" placeholder="วันนี้คุณเจออะไรมาบ้าง? รู้สึกอย่างไร?..."></textarea>
+            
+            <input type="text" id="formName" class="input-field" placeholder="ใส่ชื่อเล่นของคุณ (ไม่บังคับ)">
+            <textarea id="formInput" class="input-field" placeholder="วันนี้คุณเจออะไรมาบ้าง? รู้สึกอย่างไร?..."></textarea>
+            
             <button class="action-btn" id="btnSend">ส่งเรื่องราว</button>
         </div>
     </div>
@@ -111,7 +130,7 @@
         <a class="back-btn" id="btnBackAdmin">← กลับหน้าหลัก</a>
         <div class="admin-box">
             <h2>🔒 Admin Dashboard</h2>
-            <p>ข้อความทั้งหมดจากฐานข้อมูล (Realtime)</p>
+            <p>ข้อความทั้งหมดจากฐานข้อมูล</p>
             <ul style="list-style:none; margin-top:20px;" id="messageList">
                 <p style="text-align:center; color:#ccc;">กำลังโหลดข้อมูล...</p>
             </ul>
@@ -122,7 +141,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getDatabase, ref, push, onValue, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+        import { getDatabase, ref, push, onValue, remove, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDemVd2LZXn-wTWon-KOxIdN3AxkzASnkY",
@@ -143,16 +162,46 @@
         const formScreen = document.getElementById('formScreen');
         const adminScreen = document.getElementById('adminScreen');
         const formInput = document.getElementById('formInput');
+        const formName = document.getElementById('formName');
         const messageList = document.getElementById('messageList');
-        const successModal = document.getElementById('successModal'); // ดึง Modal มาใช้งาน
+        const successModal = document.getElementById('successModal');
+        const loginModal = document.getElementById('loginModal');
+        const adminPassword = document.getElementById('adminPassword');
 
-        // เปิดให้ window เรียกใช้ฟังก์ชัน closeModal ได้
-        window.closeModal = function() {
-            successModal.style.display = 'none'; // ซ่อน Modal
-            formInput.value = ''; // ล้างข้อความ
-            document.getElementById('btnBackForm').click(); // กลับหน้าหลัก
+        // Modal Logic
+        function closeSuccessModal() {
+            successModal.classList.remove('show');
+            setTimeout(() => {
+                successModal.style.display = 'none';
+                formInput.value = '';
+                formName.value = ''; // ล้างช่องชื่อด้วยเพื่อให้คนใหม่พิมพ์
+                document.getElementById('btnBackForm').click();
+            }, 500);
         }
 
+        document.getElementById('btnAdminLogin').onclick = () => {
+            loginModal.style.display = 'flex';
+            setTimeout(() => loginModal.classList.add('show'), 10);
+            adminPassword.value = '';
+            adminPassword.focus();
+        };
+
+        window.closeLogin = () => {
+            loginModal.classList.remove('show');
+            setTimeout(() => loginModal.style.display = 'none', 500);
+        };
+
+        window.checkLogin = () => {
+            if(adminPassword.value === "23072549") {
+                closeLogin();
+                selectionScreen.classList.add('hidden');
+                adminScreen.style.display = 'block';
+            } else {
+                alert("รหัสผ่านผิด!");
+            }
+        };
+
+        // Navigation
         document.getElementById('btnVenter').onclick = () => {
             selectionScreen.classList.add('hidden');
             formScreen.style.display = 'block';
@@ -168,31 +217,30 @@
             selectionScreen.classList.remove('hidden');
         };
 
+        // Send Message
         document.getElementById('btnSend').onclick = () => {
             const text = formInput.value.trim();
+            // ถ้าไม่พิมพ์ ให้เป็น "ไม่ระบุตัวตน"
+            const name = formName.value.trim() || "ไม่ระบุตัวตน";
+
             if (text === "") return alert("กรุณาพิมพ์ข้อความก่อนส่งนะ");
 
             push(messagesRef, {
+                nickname: name,
                 text: text,
                 date: new Date().toLocaleString('th-TH')
             })
             .then(() => {
-                // *** เปลี่ยนจาก Alert เป็นแสดง Modal แทน ***
-                successModal.style.display = 'flex'; 
+                successModal.style.display = 'flex';
+                setTimeout(() => { successModal.classList.add('show'); }, 10);
+                setTimeout(() => { closeSuccessModal(); }, 3000); 
             })
             .catch((error) => {
                 alert("เกิดข้อผิดพลาด: " + error.message);
             });
         };
 
-        document.getElementById('btnAdminLogin').onclick = () => {
-            const pwd = prompt("กรุณาใส่รหัสผ่าน Admin:");
-            if(pwd === "Thongchai2549") {
-                selectionScreen.classList.add('hidden');
-                adminScreen.style.display = 'block';
-            }
-        };
-
+        // Render Message List (Admin)
         onValue(messagesRef, (snapshot) => {
             messageList.innerHTML = "";
             const data = snapshot.val();
@@ -203,12 +251,19 @@
                 list.forEach(([key, value]) => {
                     const li = document.createElement('li');
                     li.className = 'message-item';
+                    
+                    const showName = value.nickname ? value.nickname : "ไม่ระบุตัวตน";
+
                     li.innerHTML = `
                         <div class="msg-content">
+                            <div class="msg-name">คุณ ${showName}</div>
                             <div class="msg-text">${value.text}</div>
                             <div class="msg-date">${value.date}</div>
                         </div>
-                        <button class="delete-btn" data-key="${key}">ลบ</button>
+                        <div class="btn-group">
+                            <button class="edit-btn" data-key="${key}" data-oldname="${showName}">แก้ไขชื่อ</button>
+                            <button class="delete-btn" data-key="${key}">ลบ</button>
+                        </div>
                     `;
                     messageList.appendChild(li);
                 });
@@ -220,6 +275,21 @@
                         }
                     }
                 });
+
+                document.querySelectorAll('.edit-btn').forEach(btn => {
+                    btn.onclick = function() {
+                        const key = this.dataset.key;
+                        const oldName = this.dataset.oldname;
+                        const newName = prompt("แก้ไขชื่อผู้ส่ง:", oldName);
+                        
+                        if (newName !== null && newName.trim() !== "") {
+                            update(ref(db, 'messages/' + key), {
+                                nickname: newName
+                            });
+                        }
+                    }
+                });
+
             } else {
                 messageList.innerHTML = "<p style='text-align:center; color:#999;'>ยังไม่มีข้อความส่งเข้ามา</p>";
             }
@@ -228,6 +298,3 @@
     </script>
 </body>
 </html>
-
-
-
