@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>You Safe - พื้นที่ปลอดภัย (ออนไลน์)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
+    
+    <style>
+        /* --- ตั้งค่าพื้นฐาน --- */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Kanit', sans-serif; background-color: #f0f2f5; min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px; overflow-x: hidden; position: relative; }
+        
+        /* Layout */
+        .selection-screen { display: flex; gap: 30px; text-align: center; width: 100%; max-width: 900px; justify-content: center; }
+        .form-screen, .admin-screen { display: none; width: 100%; max-width: 600px; animation: fadeIn 0.5s ease; }
+        
+        /* Card Styles */
+        .role-card { width: 100%; max-width: 400px; background: white; padding: 50px 30px; border-radius: 20px; cursor: pointer; box-shadow: 0 10px 30px rgba(0,0,0,0.05); border: 2px solid transparent; transition: all 0.3s ease; }
+        .role-card:hover { transform: translateY(-10px); box-shadow: 0 20px 40px rgba(0,0,0,0.1); border-color: #FF8C42; }
+        .role-icon { font-size: 4rem; margin-bottom: 20px; display: block; }
+        .role-card h2 { color: #FF8C42; font-size: 1.8rem; margin-bottom: 10px; }
+        .role-card p { color: #777; }
+
+        /* Form Styles */
+        .form-box { background: white; padding: 40px; border-radius: 20px; border-top: 8px solid #FF8C42; box-shadow: 0 15px 35px rgba(0,0,0,0.1); }
+        .form-header h2 { margin-bottom: 5px; color: #333; }
+        .form-header p { color: #888; margin-bottom: 20px; font-size: 0.9rem; }
+        textarea { width: 100%; height: 200px; padding: 15px; border: 2px solid #eee; border-radius: 12px; font-family: 'Kanit', sans-serif; resize: none; margin-bottom: 20px; font-size: 1rem; }
+        textarea:focus { outline: none; background-color: #fafafa; border-color: #FF8C42; }
+        
+        /* Buttons */
+        .action-btn { width: 100%; padding: 15px; border: none; border-radius: 10px; color: white; font-size: 1.1rem; cursor: pointer; background-color: #FF8C42; font-weight: 600; }
+        .action-btn:hover { opacity: 0.9; }
+        .back-btn { display: inline-block; margin-bottom: 15px; color: #666; cursor: pointer; font-size: 0.9rem; }
+        .back-btn:hover { text-decoration: underline; }
+
+        /* Admin Styles */
+        .admin-box { background: white; padding: 30px; border-radius: 20px; border-top: 8px solid #333; box-shadow: 0 15px 35px rgba(0,0,0,0.1); }
+        .message-item { border-bottom: 1px solid #eee; padding: 15px 0; display: flex; justify-content: space-between; align-items: flex-start; }
+        .msg-content { flex: 1; margin-right: 15px; }
+        .msg-text { font-size: 1rem; color: #333; margin-bottom: 5px; white-space: pre-wrap; }
+        .msg-date { font-size: 0.8rem; color: #999; }
+        .delete-btn { background: #ff4d4d; color: white; border: none; padding: 5px 12px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; }
+        .delete-btn:hover { background: #d93636; }
+        .admin-toggle { position: fixed; bottom: 10px; right: 10px; background: transparent; border: none; color: #ccc; cursor: pointer; font-size: 0.8rem; }
+        .admin-toggle:hover { color: #333; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <div class="selection-screen" id="selectionScreen">
+        <div class="role-card" id="btnVenter">
+            <span class="role-icon">😫</span>
+            <h2>ผู้ระบาย</h2>
+            <p>ฉันมีเรื่องไม่สบายใจ อยากเล่าให้ใครสักคนฟัง</p>
+        </div>
+    </div>
+
+    <div class="form-screen" id="formScreen">
+        <a class="back-btn" id="btnBackForm">← กลับหน้าหลัก</a>
+        <div class="form-box">
+            <div class="form-header">
+                <h2>😫 พื้นที่ระบายความในใจ</h2>
+                <p>เรื่องราวของคุณจะถูกส่งไปเก็บรักษาอย่างปลอดภัย</p>
+            </div>
+            <textarea id="formInput" placeholder="วันนี้คุณเจออะไรมาบ้าง? รู้สึกอย่างไร?..."></textarea>
+            <button class="action-btn" id="btnSend">ส่งเรื่องราว</button>
+        </div>
+    </div>
+
+    <div class="admin-screen" id="adminScreen">
+        <a class="back-btn" id="btnBackAdmin">← กลับหน้าหลัก</a>
+        <div class="admin-box">
+            <h2>🔒 Admin Dashboard</h2>
+            <p>ข้อความทั้งหมดจากฐานข้อมูล (Realtime)</p>
+            <ul style="list-style:none; margin-top:20px;" id="messageList">
+                <p style="text-align:center; color:#ccc;">กำลังโหลดข้อมูล...</p>
+            </ul>
+        </div>
+    </div>
+
+    <button class="admin-toggle" id="btnAdminLogin">Admin Login</button>
+
+    <script type="module">
+        // 1. นำเข้า Library
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getDatabase, ref, push, onValue, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+        // 2. Config ของคุณ (ใส่ให้แล้ว!)
+        const firebaseConfig = {
+            apiKey: "AIzaSyDemVd2LZXn-wTWon-KOxIdN3AxkzASnkY",
+            authDomain: "you-safe-6a7bd.firebaseapp.com",
+            databaseURL: "https://you-safe-6a7bd-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "you-safe-6a7bd",
+            storageBucket: "you-safe-6a7bd.firebasestorage.app",
+            messagingSenderId: "770251925608",
+            appId: "1:770251925608:web:b64c667a14837ad05df3dd",
+            measurementId: "G-JPRR8JM77J"
+        };
+
+        // เริ่มต้น Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const messagesRef = ref(db, 'messages');
+
+        // --- ส่วนจัดการหน้าจอ (UI Logic) ---
+        const selectionScreen = document.getElementById('selectionScreen');
+        const formScreen = document.getElementById('formScreen');
+        const adminScreen = document.getElementById('adminScreen');
+        const formInput = document.getElementById('formInput');
+        const messageList = document.getElementById('messageList');
+
+        // ปุ่มเปลี่ยนหน้า
+        document.getElementById('btnVenter').onclick = () => {
+            selectionScreen.classList.add('hidden');
+            formScreen.style.display = 'block';
+        };
+
+        document.getElementById('btnBackForm').onclick = () => {
+            formScreen.style.display = 'none';
+            selectionScreen.classList.remove('hidden');
+        };
+
+        document.getElementById('btnBackAdmin').onclick = () => {
+            adminScreen.style.display = 'none';
+            selectionScreen.classList.remove('hidden');
+        };
+
+        // --- ฟังก์ชันส่งข้อมูล ---
+        document.getElementById('btnSend').onclick = () => {
+            const text = formInput.value.trim();
+            if (text === "") return alert("กรุณาพิมพ์ข้อความก่อนส่งนะ");
+
+            // ส่งข้อมูลขึ้น Firebase
+            push(messagesRef, {
+                text: text,
+                date: new Date().toLocaleString('th-TH')
+            })
+            .then(() => {
+                alert("ส่งเรื่องราวเรียบร้อยครับ :)");
+                formInput.value = ''; // ล้างข้อความ
+                document.getElementById('btnBackForm').click(); // กลับหน้าหลัก
+            })
+            .catch((error) => {
+                alert("เกิดข้อผิดพลาดในการส่ง: " + error.message);
+            });
+        };
+
+        // --- ฟังก์ชัน Admin Login ---
+        document.getElementById('btnAdminLogin').onclick = () => {
+            const pwd = prompt("กรุณาใส่รหัสผ่าน Admin:");
+            if(pwd === "1234") { // <--- รหัสผ่าน
+                selectionScreen.classList.add('hidden');
+                adminScreen.style.display = 'block';
+            }
+        };
+
+        // --- ฟังข้อมูลจาก Firebase แบบ Realtime ---
+        onValue(messagesRef, (snapshot) => {
+            messageList.innerHTML = ""; // ล้างจอรอรับข้อมูลใหม่
+            const data = snapshot.val();
+            
+            if (data) {
+                // แปลงข้อมูลเป็น Array และกลับด้าน (ใหม่สุดขึ้นก่อน)
+                const list = Object.entries(data).reverse(); 
+                
+                list.forEach(([key, value]) => {
+                    const li = document.createElement('li');
+                    li.className = 'message-item';
+                    li.innerHTML = `
+                        <div class="msg-content">
+                            <div class="msg-text">${value.text}</div>
+                            <div class="msg-date">${value.date}</div>
+                        </div>
+                        <button class="delete-btn" data-key="${key}">ลบ</button>
+                    `;
+                    messageList.appendChild(li);
+                });
+
+                // ใส่ Event ให้ปุ่มลบ
+                document.querySelectorAll('.delete-btn').forEach(btn => {
+                    btn.onclick = function() {
+                        if(confirm("ยืนยันที่จะลบข้อความนี้?")) {
+                            // สั่งลบข้อมูลบน Cloud
+                            remove(ref(db, 'messages/' + this.dataset.key));
+                        }
+                    }
+                });
+            } else {
+                messageList.innerHTML = "<p style='text-align:center; color:#999;'>ยังไม่มีข้อความส่งเข้ามา</p>";
+            }
+        });
+
+    </script>
+</body>
+</html>
