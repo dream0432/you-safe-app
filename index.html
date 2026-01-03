@@ -79,7 +79,7 @@
             transform: scale(0.9); transition: transform 0.5s ease;
         }
         .modal-overlay.show .modal-box { transform: scale(1); }
-        .modal-text { font-size: 1.6rem; font-weight: 600; color: #4A4A4A; line-height: 1.5; margin-bottom: 20px; } /* ปรับ font นิดนึง */
+        .modal-text { font-size: 1.6rem; font-weight: 600; color: #4A4A4A; line-height: 1.5; margin-bottom: 20px; }
         .modal-btn-confirm { background: #333; color: white; padding: 10px 30px; border: none; border-radius: 50px; cursor: pointer; font-size: 1rem; }
         .modal-btn-cancel { background: #eee; color: #333; padding: 10px 30px; border: none; border-radius: 50px; cursor: pointer; font-size: 1rem; margin-right: 10px; }
 
@@ -172,8 +172,8 @@
         const adminPassword = document.getElementById('adminPassword');
         const encouragementText = document.getElementById('encouragementText');
 
-        // --- ระบบสุ่มคำคม (Random Quotes) ---
-        const quotes = [
+        // --- ระบบสุ่มคำคมแบบไม่ซ้ำ (Shuffle Deck + LocalStorage) ---
+        const allQuotes = [
             "เราจะอยู่ข้างๆ ตัวคุณ<br>ในวันที่แย่หรือล้มลงเสมอ 😊",
             "เก่งมากเลยนะ<br>ที่ผ่านเรื่องราววันนี้มาได้ ✌️",
             "ร้องไห้ออกมาได้นะ<br>น้ำตาไม่ใช่ความอ่อนแอ 🌧️",
@@ -186,17 +186,26 @@
             "เหนื่อยก็พักนะ<br>เราเป็นกำลังใจให้เสมอ 🔋"
         ];
 
-        let lastQuoteIndex = -1; // จำค่าล่าสุดไว้
-
         function getRandomQuote() {
-            let newIndex;
-            // สุ่มใหม่เรื่อยๆ ถ้ามันไปซ้ำกับอันล่าสุด (และต้องมีคำคมมากกว่า 1 อัน)
-            do {
-                newIndex = Math.floor(Math.random() * quotes.length);
-            } while (newIndex === lastQuoteIndex && quotes.length > 1);
+            // 1. ดึงรายการที่ยังเหลือจากความจำเครื่อง (localStorage)
+            let availableQuotes = JSON.parse(localStorage.getItem('availableQuotes')) || [];
 
-            lastQuoteIndex = newIndex; // จำค่าใหม่ไว้
-            return quotes[newIndex];
+            // 2. ถ้าหมดสต็อก (หรือเพิ่งมาครั้งแรก) ให้เติมใหม่เต็มถัง
+            if (availableQuotes.length === 0) {
+                availableQuotes = [...allQuotes];
+            }
+
+            // 3. สุ่มหยิบมา 1 อัน
+            const randomIndex = Math.floor(Math.random() * availableQuotes.length);
+            const selectedQuote = availableQuotes[randomIndex];
+
+            // 4. ลบอันที่หยิบแล้วออกไปจากกอง
+            availableQuotes.splice(randomIndex, 1);
+
+            // 5. บันทึกกองที่เหลือกลับเข้าเครื่อง
+            localStorage.setItem('availableQuotes', JSON.stringify(availableQuotes));
+
+            return selectedQuote;
         }
 
         // Modal Logic
@@ -204,130 +213,3 @@
             successModal.classList.remove('show');
             setTimeout(() => {
                 successModal.style.display = 'none';
-                formInput.value = '';
-                formName.value = '';
-                document.getElementById('btnBackForm').click();
-            }, 500);
-        }
-
-        document.getElementById('btnAdminLogin').onclick = () => {
-            loginModal.style.display = 'flex';
-            setTimeout(() => loginModal.classList.add('show'), 10);
-            adminPassword.value = '';
-            adminPassword.focus();
-        };
-
-        window.closeLogin = () => {
-            loginModal.classList.remove('show');
-            setTimeout(() => loginModal.style.display = 'none', 500);
-        };
-
-        window.checkLogin = () => {
-            if(adminPassword.value === "23072549") {
-                closeLogin();
-                selectionScreen.classList.add('hidden');
-                adminScreen.style.display = 'block';
-            } else {
-                alert("รหัสผ่านผิด!");
-            }
-        };
-
-        // Navigation
-        document.getElementById('btnVenter').onclick = () => {
-            selectionScreen.classList.add('hidden');
-            formScreen.style.display = 'block';
-        };
-
-        document.getElementById('btnBackForm').onclick = () => {
-            formScreen.style.display = 'none';
-            selectionScreen.classList.remove('hidden');
-        };
-
-        document.getElementById('btnBackAdmin').onclick = () => {
-            adminScreen.style.display = 'none';
-            selectionScreen.classList.remove('hidden');
-        };
-
-        // Send Message
-        document.getElementById('btnSend').onclick = () => {
-            const text = formInput.value.trim();
-            const name = formName.value.trim() || "ไม่ระบุตัวตน";
-
-            if (text === "") return alert("กรุณาพิมพ์ข้อความก่อนส่งนะ");
-
-            push(messagesRef, {
-                nickname: name,
-                text: text,
-                date: new Date().toLocaleString('th-TH')
-            })
-            .then(() => {
-                // --- สุ่มคำคมใหม่ใส่เข้าไป ---
-                encouragementText.innerHTML = getRandomQuote();
-
-                successModal.style.display = 'flex';
-                setTimeout(() => { successModal.classList.add('show'); }, 10);
-                setTimeout(() => { closeSuccessModal(); }, 3500); // เพิ่มเวลาโชว์นิดนึงเป็น 3.5 วิ
-            })
-            .catch((error) => {
-                alert("เกิดข้อผิดพลาด: " + error.message);
-            });
-        };
-
-        // Render Message List (Admin)
-        onValue(messagesRef, (snapshot) => {
-            messageList.innerHTML = "";
-            const data = snapshot.val();
-            
-            if (data) {
-                const list = Object.entries(data).reverse(); 
-                
-                list.forEach(([key, value]) => {
-                    const li = document.createElement('li');
-                    li.className = 'message-item';
-                    
-                    const showName = value.nickname ? value.nickname : "ไม่ระบุตัวตน";
-
-                    li.innerHTML = `
-                        <div class="msg-content">
-                            <div class="msg-name">คุณ ${showName}</div>
-                            <div class="msg-text">${value.text}</div>
-                            <div class="msg-date">${value.date}</div>
-                        </div>
-                        <div class="btn-group">
-                            <button class="edit-btn" data-key="${key}" data-oldname="${showName}">แก้ไขชื่อ</button>
-                            <button class="delete-btn" data-key="${key}">ลบ</button>
-                        </div>
-                    `;
-                    messageList.appendChild(li);
-                });
-
-                document.querySelectorAll('.delete-btn').forEach(btn => {
-                    btn.onclick = function() {
-                        if(confirm("ยืนยันที่จะลบข้อความนี้?")) {
-                            remove(ref(db, 'messages/' + this.dataset.key));
-                        }
-                    }
-                });
-
-                document.querySelectorAll('.edit-btn').forEach(btn => {
-                    btn.onclick = function() {
-                        const key = this.dataset.key;
-                        const oldName = this.dataset.oldname;
-                        const newName = prompt("แก้ไขชื่อผู้ส่ง:", oldName);
-                        
-                        if (newName !== null && newName.trim() !== "") {
-                            update(ref(db, 'messages/' + key), {
-                                nickname: newName
-                            });
-                        }
-                    }
-                });
-
-            } else {
-                messageList.innerHTML = "<p style='text-align:center; color:#999;'>ยังไม่มีข้อความส่งเข้ามา</p>";
-            }
-        });
-
-    </script>
-</body>
-</html>
